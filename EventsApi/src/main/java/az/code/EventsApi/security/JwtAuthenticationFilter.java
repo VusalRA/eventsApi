@@ -1,6 +1,5 @@
 package az.code.EventsApi.security;
 
-import az.code.EventsApi.exceptions.ErrorFethcingUsernameException;
 import az.code.EventsApi.exceptions.TokenExpiredException;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.SignatureException;
@@ -45,7 +44,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 username = jwtTokenUtil.getUsernameFromToken(authToken);
             } catch (IllegalArgumentException e) {
-                throw new ErrorFethcingUsernameException();
+                throw new RuntimeException("Error fetching username");
             } catch (ExpiredJwtException e) {
                 throw new TokenExpiredException();
             } catch (SignatureException e) {

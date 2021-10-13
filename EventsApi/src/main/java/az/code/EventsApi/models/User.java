@@ -11,8 +11,8 @@ import javax.persistence.*;
 @AllArgsConstructor
 @Entity
 @Builder(toBuilder = true)
-@Table(name = "administrators")
-public class Administrator {
+@Table(name = "users")
+public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

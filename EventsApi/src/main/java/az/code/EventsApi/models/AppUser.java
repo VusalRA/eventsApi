@@ -21,7 +21,5 @@ public class AppUser {
     private String password;
     private String role;
 
-//    @OneToMany(mappedBy = "appUsers")
-//    private List<Task> tasks;
 
 }

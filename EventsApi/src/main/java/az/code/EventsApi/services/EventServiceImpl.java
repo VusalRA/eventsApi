@@ -6,13 +6,12 @@ import az.code.EventsApi.dto.ReturnEventDto;
 import az.code.EventsApi.enums.ColorTitleBar;
 import az.code.EventsApi.enums.EventType;
 import az.code.EventsApi.enums.Role;
-import az.code.EventsApi.exceptions.DeadlineException;
-import az.code.EventsApi.models.Administrator;
 import az.code.EventsApi.models.AppUser;
 import az.code.EventsApi.models.Event;
-import az.code.EventsApi.repositories.AdministratorRepo;
+import az.code.EventsApi.models.User;
 import az.code.EventsApi.repositories.AppUserRepo;
 import az.code.EventsApi.repositories.EventRepo;
+import az.code.EventsApi.repositories.UserRepo;
 import az.code.EventsApi.services.interfaces.EventService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -37,13 +36,13 @@ public class EventServiceImpl implements EventService, UserDetailsService {
 
 
     private AppUserRepo appUserRepo;
-    private AdministratorRepo administratorRepo;
+    private UserRepo userRepo;
     private EventRepo eventRepo;
     private BCryptPasswordEncoder bcryptEncoder;
 
-    public EventServiceImpl(AppUserRepo appUserRepo, AdministratorRepo administratorRepo, EventRepo eventRepo, BCryptPasswordEncoder bcryptEncoder) {
+    public EventServiceImpl(AppUserRepo appUserRepo, UserRepo userRepo, EventRepo eventRepo, BCryptPasswordEncoder bcryptEncoder) {
         this.appUserRepo = appUserRepo;
-        this.administratorRepo = administratorRepo;
+        this.userRepo = userRepo;
         this.eventRepo = eventRepo;
         this.bcryptEncoder = bcryptEncoder;
     }
@@ -64,8 +63,8 @@ public class EventServiceImpl implements EventService, UserDetailsService {
     }
 
     @Override
-    public Administrator addAdministrator(Administrator administrator) {
-        return administratorRepo.save(administrator);
+    public User addUser(User user) {
+        return userRepo.save(user);
     }
 
     @Override
@@ -100,26 +99,28 @@ public class EventServiceImpl implements EventService, UserDetailsService {
         try {
             dateTime = LocalDate.parse(event.getDate(), formatter);
             if (LocalDate.now().isAfter(dateTime)) {
-                throw new DeadlineException();
+                throw new RuntimeException("You can't enter old date");
             }
         } catch (Exception e) {
-            throw new DeadlineException();
+            throw new RuntimeException(e.getMessage());
         }
 
         Event addEvent = Event.builder().description(event.getDescription()).createdBy(
                 user.getEmail()
-        ).title(event.getTitle()).type(event.getType().name()).date(dateTime).build();
+        ).title(event.getTitle()).type(event.getType()).date(dateTime).build();
 
-        if (event.getType().equals(EventType.REST)) {
-            addEvent.setColorTitleBar(ColorTitleBar.GREEN);
-        } else if (event.getType().equals(EventType.HOLIDAY)) {
-            addEvent.setColorTitleBar(ColorTitleBar.GREEN);
-        } else {
-            Long days = calculateDays(dateTime);
-            addEvent.setColorTitleBar(getColor(days));
+        switch (event.getType()) {
+            case HOLIDAY:
+                addEvent.setColorTitleBar(ColorTitleBar.GREEN);
+                break;
+            case REST:
+                addEvent.setColorTitleBar(ColorTitleBar.GREEN);
+                break;
+            case OTHER:
+                Long days = calculateDays(dateTime);
+                addEvent.setColorTitleBar(getColor(days));
+                break;
         }
-
-
         return eventRepo.save(addEvent);
     }
 
@@ -144,22 +145,23 @@ public class EventServiceImpl implements EventService, UserDetailsService {
         List<Event> events = new ArrayList<>();
 
         if (date.getDate().length() > 10) {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-            LocalDate dateTimeFrom = null;
-            LocalDate dateTimeTo = null;
-            dateTimeFrom = LocalDate.parse(date.getDate().substring(0, 10), formatter);
-            dateTimeTo = LocalDate.parse(date.getDate().substring(11, date.getDate().length()), formatter);
-            eventRepo.findByDateBetween(dateTimeFrom, dateTimeTo).stream().forEach(event -> events.add(event));
+            LocalDate dateFrom = parseDate(date.getDate().substring(0, 10));
+            LocalDate dateTo = parseDate(date.getDate().substring(11, date.getDate().length()));
+            eventRepo.findByDateBetween(dateFrom, dateTo).stream().forEach(event -> events.add(event));
         } else {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-            LocalDate dateTime = null;
-            dateTime = LocalDate.parse(date.getDate(), formatter);
-            events.add(eventRepo.findByDate(dateTime));
+            events.add(eventRepo.findByDate(parseDate(date.getDate())));
         }
 
         events.stream().forEach(event -> returnEventDtos.add(new ReturnEventDto(event, getAppUserFromToken())));
 
         return returnEventDtos;
+    }
+
+    private LocalDate parseDate(String date) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        LocalDate dateTime = null;
+        dateTime = LocalDate.parse(date, formatter);
+        return dateTime;
     }
 
     @Override
@@ -176,18 +178,22 @@ public class EventServiceImpl implements EventService, UserDetailsService {
     }
 
     @Override
-    public Event changeEvent(Long id, AppUser user, EventDto event) {
-//        Event event
-        Event eventById = eventRepo.findById(id).get();
-//        if (user.getRole().equals(Role.ADMIN.name())) {
-//            eventRepo.save(event);
-//        } else {
-//            if (event.getCreatedBy().equals(user.getEmail())) {
-//                eventRepo.save(event);
-//            }
-//        }
+    public Event updateEvent(Long id, AppUser user, EventDto event) {
+        Event findEventById = eventRepo.findById(id).get();
+        findEventById.setDate(parseDate(event.getDate()));
+        findEventById.setTitle(event.getTitle());
+        findEventById.setDescription(event.getDescription());
+        findEventById.setType(event.getType());
 
-        return eventById;
+        if (user.getRole().equals(Role.ADMIN.name())) {
+            eventRepo.save(findEventById);
+        } else {
+            if (findEventById.getCreatedBy().equals(user.getEmail())) {
+                eventRepo.save(findEventById);
+            }
+        }
+
+        return findEventById;
     }
 
     private Long calculateDays(LocalDate to) {
@@ -206,18 +212,24 @@ public class EventServiceImpl implements EventService, UserDetailsService {
         });
     }
 
+    @Override
+    public List<Event> getReports() {
+        return eventRepo.findAll();
+    }
+
     private ColorTitleBar getColor(Long days) {
         ColorTitleBar colorTitleBar = null;
 
         if (days >= 21) {
             colorTitleBar = ColorTitleBar.BLUE;
-        } else if (days <= 5) {
-            colorTitleBar = ColorTitleBar.RED;
-        } else if (days >= 5 && days <= 10) {
-            colorTitleBar = ColorTitleBar.ORANGE;
         } else if (days >= 10 && days <= 20) {
             colorTitleBar = ColorTitleBar.YELLOW;
+        } else if (days >= 5 && days <= 10) {
+            colorTitleBar = ColorTitleBar.ORANGE;
+        } else if (days <= 5) {
+            colorTitleBar = ColorTitleBar.RED;
         }
+
         return colorTitleBar;
     }
 }

@@ -1,6 +1,7 @@
 package az.code.EventsApi.models;
 
 import az.code.EventsApi.enums.ColorTitleBar;
+import az.code.EventsApi.enums.EventType;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 
@@ -21,7 +22,7 @@ public class Event {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String title;
-    private String type;
+    private EventType type;
     private String description;
     private LocalDate date;
     private String createdBy;
