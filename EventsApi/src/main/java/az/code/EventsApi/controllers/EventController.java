@@ -3,6 +3,7 @@ package az.code.EventsApi.controllers;
 import az.code.EventsApi.dto.AdministratorDto;
 import az.code.EventsApi.dto.EventDto;
 import az.code.EventsApi.dto.FindEventByDateDto;
+import az.code.EventsApi.dto.ReturnEventDto;
 import az.code.EventsApi.enums.Role;
 import az.code.EventsApi.models.Administrator;
 import az.code.EventsApi.models.AppUser;
@@ -66,10 +67,18 @@ public class EventController {
     }
 
     @GetMapping("/event")
-    public ResponseEntity<List<Event>> getEventsByDate(@RequestBody FindEventByDateDto eventDate) {
-//        return ResponseEntity.ok(eventService.getEvent(id, eventService.getAppUserFromToken()));
+    public ResponseEntity<List<ReturnEventDto>> getEventsByDate(@RequestBody FindEventByDateDto eventDate) {
         return ResponseEntity.ok(eventService.getEvents(eventDate));
     }
 
+    @DeleteMapping("/event/{id}")
+    public ResponseEntity<Event> deleteEvent(@PathVariable Long id) {
+        return ResponseEntity.ok(eventService.deleteEventById(id, eventService.getAppUserFromToken()));
+    }
+
+    @PatchMapping("/event/{id}")
+    public ResponseEntity<Event> changeEvent(@PathVariable Long id, @RequestBody EventDto event) {
+        return ResponseEntity.ok(eventService.changeEvent(id, eventService.getAppUserFromToken(), event));
+    }
 
 }

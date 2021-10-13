@@ -2,6 +2,7 @@ package az.code.EventsApi.services.interfaces;
 
 import az.code.EventsApi.dto.EventDto;
 import az.code.EventsApi.dto.FindEventByDateDto;
+import az.code.EventsApi.dto.ReturnEventDto;
 import az.code.EventsApi.models.Administrator;
 import az.code.EventsApi.models.AppUser;
 import az.code.EventsApi.models.Event;
@@ -20,5 +21,11 @@ public interface EventService {
 
     Event getEvent(Long id, AppUser user);
 
-    List<Event> getEvents(FindEventByDateDto date);
+    List<ReturnEventDto> getEvents(FindEventByDateDto date);
+
+    Event deleteEventById(Long id, AppUser user);
+
+    Event changeEvent(Long id, AppUser user, EventDto event);
+
+    void checkDate();
 }

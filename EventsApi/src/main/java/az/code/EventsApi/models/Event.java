@@ -1,6 +1,6 @@
 package az.code.EventsApi.models;
 
-import az.code.EventsApi.enums.EventType;
+import az.code.EventsApi.enums.ColorTitleBar;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 
@@ -25,8 +25,9 @@ public class Event {
     private String description;
     private LocalDate date;
     private String createdBy;
+    private ColorTitleBar colorTitleBar;
 
     @JsonIgnore
-    @ManyToMany(cascade = CascadeType.ALL)
+    @ManyToMany(cascade = CascadeType.MERGE)
     private List<AppUser> readList = new ArrayList<>();
 }
