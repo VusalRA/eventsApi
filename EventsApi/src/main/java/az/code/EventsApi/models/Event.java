@@ -1,10 +1,13 @@
 package az.code.EventsApi.models;
 
 import az.code.EventsApi.enums.EventType;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 
 import javax.persistence.*;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Builder(toBuilder = true)
@@ -18,8 +21,12 @@ public class Event {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String title;
-    private EventType type;
+    private String type;
     private String description;
-    @Column(name = "date_time")
-    private LocalDateTime dateTime;
+    private LocalDate date;
+    private String createdBy;
+
+    @JsonIgnore
+    @ManyToMany(cascade = CascadeType.ALL)
+    private List<AppUser> readList = new ArrayList<>();
 }
